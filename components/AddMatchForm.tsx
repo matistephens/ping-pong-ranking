@@ -10,19 +10,22 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { createMatch } from '@/lib/actions';
 import { useToast } from '@/components/ui/use-toast';
+import { PlayerSelector } from '@/components/PlayerSelector';
+import { useAppDispatch } from '@/store';
+import { triggerRefresh } from '@/store/slices/refreshSlice';
 
 const matchSchema = z.object({
-  playerAName: z.string().min(1, 'Player A name is required'),
-  playerBName: z.string().min(1, 'Player B name is required'),
+  playerAId: z.string().min(1, 'Player A is required'),
+  playerBId: z.string().min(1, 'Player B is required'),
   gamesA: z.number().min(0, 'Games must be non-negative'),
   gamesB: z.number().min(0, 'Games must be non-negative'),
   playedAt: z.string(),
 }).refine((data) => data.gamesA !== data.gamesB, {
   message: 'Games cannot be equal (no ties allowed)',
   path: ['gamesA'],
-}).refine((data) => data.playerAName.trim().toLowerCase() !== data.playerBName.trim().toLowerCase(), {
+}).refine((data) => data.playerAId !== data.playerBId, {
   message: 'Players must be different',
-  path: ['playerBName'],
+  path: ['playerBId'],
 });
 
 type MatchFormData = z.infer<typeof matchSchema>;
@@ -30,11 +33,14 @@ type MatchFormData = z.infer<typeof matchSchema>;
 export function AddMatchForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<MatchFormData>({
     resolver: zodResolver(matchSchema),
@@ -54,9 +60,11 @@ export function AddMatchForm() {
       if (result.success) {
         toast({
           title: 'Match added successfully!',
-          description: `${data.playerAName} vs ${data.playerBName} - ${data.gamesA}-${data.gamesB}`,
+          description: `Match recorded - ${data.gamesA}-${data.gamesB}`,
         });
         reset();
+        // Trigger a refresh of all components
+        dispatch(triggerRefresh());
       } else {
         toast({
           title: 'Error adding match',
@@ -86,28 +94,25 @@ export function AddMatchForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="playerAName">Player A</Label>
-              <Input
-                id="playerAName"
-                {...register('playerAName')}
-                placeholder="Enter player name"
-              />
-              {errors.playerAName && (
-                <p className="text-sm text-destructive">{errors.playerAName.message}</p>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="playerBName">Player B</Label>
-              <Input
-                id="playerBName"
-                {...register('playerBName')}
-                placeholder="Enter player name"
-              />
-              {errors.playerBName && (
-                <p className="text-sm text-destructive">{errors.playerBName.message}</p>
-              )}
-            </div>
+            <PlayerSelector
+              label="Player A"
+              value={watch('playerAId')}
+              onChange={(playerId) => setValue('playerAId', playerId)}
+              excludePlayerId={watch('playerBId')}
+            />
+            {errors.playerAId && (
+              <p className="text-sm text-destructive">{errors.playerAId.message}</p>
+            )}
+            
+            <PlayerSelector
+              label="Player B"
+              value={watch('playerBId')}
+              onChange={(playerId) => setValue('playerBId', playerId)}
+              excludePlayerId={watch('playerAId')}
+            />
+            {errors.playerBId && (
+              <p className="text-sm text-destructive">{errors.playerBId.message}</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

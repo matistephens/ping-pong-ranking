@@ -6,8 +6,8 @@ import { getMonthStart, getMonthEnd } from './timezone';
 import { zonedTimeToUtc } from 'date-fns-tz';
 
 export async function createMatch(data: {
-  playerAName: string;
-  playerBName: string;
+  playerAId: string;
+  playerBId: string;
   gamesA: number;
   gamesB: number;
   playedAt: Date;
@@ -20,22 +20,22 @@ export async function createMatch(data: {
     if (data.gamesA < 0 || data.gamesB < 0) {
       throw new Error('Games must be non-negative');
     }
-    if (data.playerAName.trim().toLowerCase() === data.playerBName.trim().toLowerCase()) {
+    if (data.playerAId === data.playerBId) {
       throw new Error('Players must be different');
     }
 
-    // Ensure both players exist
-    const playerA = await prisma.player.upsert({
-      where: { name: data.playerAName.trim() },
-      update: {},
-      create: { name: data.playerAName.trim() },
+    // Get both players
+    const playerA = await prisma.player.findUnique({
+      where: { id: data.playerAId },
     });
 
-    const playerB = await prisma.player.upsert({
-      where: { name: data.playerBName.trim() },
-      update: {},
-      create: { name: data.playerBName.trim() },
+    const playerB = await prisma.player.findUnique({
+      where: { id: data.playerBId },
     });
+
+    if (!playerA || !playerB) {
+      throw new Error('One or both players not found');
+    }
 
     // Get current ratings
     const ratingA = await prisma.rating.findFirst({
@@ -223,7 +223,6 @@ export async function getWeeklyLeaderboard(weekStart: Date, weekEnd: Date) {
     });
 
     return Array.from(playerStats.values())
-      .filter(player => player.matches >= 2) // Minimum 2 matches for weekly winner
       .sort((a, b) => {
         const winRateA = a.matches > 0 ? a.wins / a.matches : 0;
         const winRateB = b.matches > 0 ? b.wins / b.matches : 0;
@@ -284,7 +283,6 @@ export async function getMonthlyLeaderboard(year: number, month: number) {
     });
 
     return Array.from(playerStats.values())
-      .filter(player => player.matches >= 4) // Minimum 4 matches for monthly champion
       .sort((a, b) => {
         const winRateA = a.matches > 0 ? a.wins / a.matches : 0;
         const winRateB = b.matches > 0 ? b.wins / b.matches : 0;
@@ -385,5 +383,37 @@ export async function getCupsLeaderboard() {
   } catch (error) {
     console.error('Error fetching cups leaderboard:', error);
     return [];
+  }
+}
+
+export async function getAllPlayers() {
+  try {
+    return await prisma.player.findMany({
+      orderBy: { name: 'asc' },
+    });
+  } catch (error) {
+    console.error('Error fetching players:', error);
+    return [];
+  }
+}
+
+export async function createPlayer(name: string) {
+  try {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      throw new Error('Player name cannot be empty');
+    }
+
+    const player = await prisma.player.create({
+      data: { name: trimmedName },
+    });
+
+    return { success: true, player };
+  } catch (error) {
+    console.error('Error creating player:', error);
+    if (error instanceof Error && error.message.includes('Unique constraint')) {
+      return { success: false, error: 'A player with this name already exists' };
+    }
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

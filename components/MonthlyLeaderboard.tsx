@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getMonthlyLeaderboard } from '@/lib/actions';
-import { getMonthStart, getMonthEnd, getMonthLabel } from '@/lib/timezone';
+import { useAppSelector } from '@/store';
+import { useDataRefresh } from '@/lib/hooks/useDataRefresh';
 
 interface MonthlyPlayer {
   name: string;
@@ -13,37 +12,17 @@ interface MonthlyPlayer {
 }
 
 export function MonthlyLeaderboard() {
-  const [leaderboard, setLeaderboard] = useState<MonthlyPlayer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [monthLabel, setMonthLabel] = useState('');
-
-  useEffect(() => {
-    const fetchMonthlyLeaderboard = async () => {
-      try {
-        const now = new Date();
-        const monthStart = getMonthStart(now);
-        const monthEnd = getMonthEnd(now);
-        const month = getMonthLabel(now);
-        
-        setMonthLabel(month);
-        const data = await getMonthlyLeaderboard(now.getFullYear(), now.getMonth() + 1);
-        setLeaderboard(data);
-      } catch (error) {
-        console.error('Error fetching monthly leaderboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMonthlyLeaderboard();
-  }, []);
+  const { loading, players: leaderboard, monthLabel } = useAppSelector(state => state.leaderboard.monthly);
+  
+  // Initialize data refresh hook
+  useDataRefresh();
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>This Month</CardTitle>
-          <CardDescription>Monthly leaderboard (min 4 matches)</CardDescription>
+          <CardDescription>Monthly leaderboard</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">Loading...</div>

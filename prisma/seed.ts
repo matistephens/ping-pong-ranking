@@ -3,54 +3,83 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Create sample players
-  const alice = await prisma.player.upsert({
-    where: { name: 'Alice' },
-    update: {},
-    create: { name: 'Alice' },
-  });
+  // Clean up any old sample players and their related data
+  const oldPlayerNames = ['Alice', 'Bob', 'Charlie'];
+  
+  // First, delete matches and ratings for old players
+  for (const name of oldPlayerNames) {
+    const oldPlayer = await prisma.player.findUnique({
+      where: { name },
+    });
+    
+    if (oldPlayer) {
+      // Delete related data first
+      await prisma.rating.deleteMany({
+        where: { playerId: oldPlayer.id },
+      });
+      
+      await prisma.match.deleteMany({
+        where: {
+          OR: [
+            { playerAId: oldPlayer.id },
+            { playerBId: oldPlayer.id },
+          ],
+        },
+      });
+      
+      // Then delete the player
+      await prisma.player.delete({
+        where: { id: oldPlayer.id },
+      });
+    }
+  }
 
-  const bob = await prisma.player.upsert({
-    where: { name: 'Bob' },
-    update: {},
-    create: { name: 'Bob' },
-  });
+  // Create hardcoded players
+  const playerNames = ['Mati', 'Rodrigo', 'Max', 'Rigved', 'Ziai', 'Jake'];
+  
+  const players = [];
+  for (const name of playerNames) {
+    const player = await prisma.player.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+    players.push(player);
+  }
 
-  const charlie = await prisma.player.upsert({
-    where: { name: 'Charlie' },
-    update: {},
-    create: { name: 'Charlie' },
-  });
-
-  // Create initial ratings
+  // Create initial ratings for all players
   await prisma.rating.createMany({
-    data: [
-      { playerId: alice.id, value: 1000, atTime: new Date() },
-      { playerId: bob.id, value: 1000, atTime: new Date() },
-      { playerId: charlie.id, value: 1000, atTime: new Date() },
-    ],
+    data: players.map(player => ({
+      playerId: player.id,
+      value: 1000,
+      atTime: new Date(),
+    })),
   });
 
-  // Create sample matches
-  const match1 = await prisma.match.create({
-    data: {
-      playerAId: alice.id,
-      playerBId: bob.id,
-      gamesA: 3,
-      gamesB: 1,
-      playedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
-    },
-  });
+  // Create some sample matches between the players
+  if (players.length >= 2) {
+    const match1 = await prisma.match.create({
+      data: {
+        playerAId: players[0].id,
+        playerBId: players[1].id,
+        gamesA: 3,
+        gamesB: 1,
+        playedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), // 2 days ago
+      },
+    });
 
-  const match2 = await prisma.match.create({
-    data: {
-      playerAId: bob.id,
-      playerBId: charlie.id,
-      gamesA: 2,
-      gamesB: 3,
-      playedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
-    },
-  });
+    if (players.length >= 3) {
+      const match2 = await prisma.match.create({
+        data: {
+          playerAId: players[1].id,
+          playerBId: players[2].id,
+          gamesA: 2,
+          gamesB: 3,
+          playedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), // 1 day ago
+        },
+      });
+    }
+  }
 
   // Create championship for current month
   const now = new Date();

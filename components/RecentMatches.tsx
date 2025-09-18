@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getRecentMatches } from '@/lib/actions';
 import { format } from 'date-fns';
+import { useAppSelector } from '@/store';
+import { useDataRefresh } from '@/lib/hooks/useDataRefresh';
 
 interface Match {
   id: string;
@@ -15,23 +15,11 @@ interface Match {
 }
 
 export function RecentMatches() {
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchRecentMatches = async () => {
-      try {
-        const data = await getRecentMatches(10);
-        setMatches(data);
-      } catch (error) {
-        console.error('Error fetching recent matches:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecentMatches();
-  }, []);
+  const { loading } = useAppSelector(state => state.matches);
+  const matches = useAppSelector(state => state.matches.matches);
+  
+  // Initialize data refresh hook
+  useDataRefresh();
 
   if (loading) {
     return (

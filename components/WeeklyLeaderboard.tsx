@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getWeeklyLeaderboard } from '@/lib/actions';
-import { getWeekStart, getWeekEnd, getWeekLabel } from '@/lib/timezone';
+import { useAppSelector } from '@/store';
+import { useDataRefresh } from '@/lib/hooks/useDataRefresh';
 
 interface WeeklyPlayer {
   name: string;
@@ -13,37 +12,17 @@ interface WeeklyPlayer {
 }
 
 export function WeeklyLeaderboard() {
-  const [leaderboard, setLeaderboard] = useState<WeeklyPlayer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [weekLabel, setWeekLabel] = useState('');
-
-  useEffect(() => {
-    const fetchWeeklyLeaderboard = async () => {
-      try {
-        const now = new Date();
-        const weekStart = getWeekStart(now);
-        const weekEnd = getWeekEnd(now);
-        const week = getWeekLabel(now);
-        
-        setWeekLabel(week);
-        const data = await getWeeklyLeaderboard(weekStart, weekEnd);
-        setLeaderboard(data);
-      } catch (error) {
-        console.error('Error fetching weekly leaderboard:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWeeklyLeaderboard();
-  }, []);
+  const { loading, players: leaderboard, weekLabel } = useAppSelector(state => state.leaderboard.weekly);
+  
+  // Initialize data refresh hook
+  useDataRefresh();
 
   if (loading) {
     return (
       <Card>
         <CardHeader>
           <CardTitle>This Week</CardTitle>
-          <CardDescription>Weekly leaderboard (min 2 matches)</CardDescription>
+          <CardDescription>Weekly leaderboard</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">Loading...</div>
