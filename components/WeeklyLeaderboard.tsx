@@ -6,9 +6,21 @@ import { getWeeklyLeaderboard } from '@/lib/actions';
 import { LeaderboardTable } from './LeaderboardTable';
 import { useAppSelector } from '@/store';
 
+interface PlayerStats {
+  id: string;
+  name: string;
+  wins: number;
+  losses: number;
+  matches: number;
+  btRating: number;
+  dynamicPoints: number;
+  prevRank: number | null;
+  currentRank: number;
+}
+
 export function WeeklyLeaderboard() {
   const [loading, setLoading] = useState(true);
-  const [players, setPlayers] = useState([]);
+  const [players, setPlayers] = useState<PlayerStats[]>([]);
   const [weekLabel, setWeekLabel] = useState('');
   const refreshCounter = useAppSelector((state) => state.refresh.counter);
 

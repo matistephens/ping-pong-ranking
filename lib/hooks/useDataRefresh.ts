@@ -28,9 +28,16 @@ export function useDataRefresh() {
         getMonthlyLeaderboard(now.getFullYear(), now.getMonth() + 1),
       ]);
 
+      // Convert Date objects to strings for Redux store
+      const convertedMatches = matches.map(match => ({
+        ...match,
+        playedAt: match.playedAt.toISOString(),
+        createdAt: match.createdAt.toISOString(),
+      }));
+
       // Update Redux store
       dispatch(setPlayers(ratings));
-      dispatch(setMatches(matches));
+      dispatch(setMatches(convertedMatches));
       dispatch(setWeeklyLeaderboard({ players: weeklyData, weekLabel }));
       dispatch(setMonthlyLeaderboard({ players: monthlyData, monthLabel }));
     } catch (error) {

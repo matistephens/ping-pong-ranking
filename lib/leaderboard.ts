@@ -8,8 +8,8 @@ interface PlayerStats {
   matches: number;
   btRating: number;
   dynamicPoints: number;
-  prevRank?: number;
-  currentRank?: number;
+  prevRank: number | null;
+  currentRank: number;
 }
 
 export async function getLeaderboardStats(startDate: Date, endDate: Date) {
@@ -89,8 +89,8 @@ export async function getLeaderboardStats(startDate: Date, endDate: Date) {
       matches: totalMatches,
       btRating: player.ratings[0]?.btRating ?? 1000,
       dynamicPoints: player.ratings[0]?.dynamicPoints ?? 0,
-      prevRank: player.ratings[0]?.prevRank,
-      currentRank: player.ratings[0]?.currentRank,
+      prevRank: player.ratings[0]?.prevRank ?? null,
+      currentRank: player.ratings[0]?.currentRank ?? 1,
     });
   });
 

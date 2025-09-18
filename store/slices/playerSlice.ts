@@ -3,11 +3,10 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 export interface Player {
   id: string;
   name: string;
-  createdAt: string;
-  currentRating?: number;
-  matchesPlayed?: number;
-  wins?: number;
-  losses?: number;
+  currentRating: number;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
 }
 
 interface PlayerState {

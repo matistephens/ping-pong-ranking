@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -29,11 +29,7 @@ export function PlayerSelector({ label, value, onChange, excludePlayerId }: Play
   const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadPlayers();
-  }, []);
-
-  const loadPlayers = async () => {
+  const loadPlayers = useCallback(async () => {
     try {
       const fetchedPlayers = await getAllPlayers();
       setPlayers(fetchedPlayers);
@@ -46,7 +42,11 @@ export function PlayerSelector({ label, value, onChange, excludePlayerId }: Play
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    loadPlayers();
+  }, [loadPlayers]);
 
   const handleCreatePlayer = async () => {
     if (!newPlayerName.trim()) {
