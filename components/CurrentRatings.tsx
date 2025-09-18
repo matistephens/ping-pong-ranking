@@ -1,0 +1,79 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { getCurrentRatings } from '@/lib/actions';
+
+interface Rating {
+  id: string;
+  name: string;
+  currentRating: number;
+  matchesPlayed: number;
+  wins: number;
+  losses: number;
+}
+
+export function CurrentRatings() {
+  const [ratings, setRatings] = useState<Rating[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchRatings = async () => {
+      try {
+        const data = await getCurrentRatings();
+        setRatings(data);
+      } catch (error) {
+        console.error('Error fetching ratings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRatings();
+  }, []);
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Current Ratings</CardTitle>
+          <CardDescription>Elo-based player rankings</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4">Loading...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Current Ratings</CardTitle>
+        <CardDescription>Elo-based player rankings</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {ratings.slice(0, 20).map((rating, index) => (
+            <div key={rating.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+              <div className="flex items-center space-x-3">
+                <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                <span className="font-medium">{rating.name}</span>
+              </div>
+              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                <span>{rating.currentRating}</span>
+                <span>{rating.matchesPlayed} matches</span>
+                <span>{rating.wins}-{rating.losses}</span>
+              </div>
+            </div>
+          ))}
+          {ratings.length === 0 && (
+            <div className="text-center py-4 text-muted-foreground">
+              No players yet. Add a match to get started!
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}

@@ -1,0 +1,52 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Player {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  // Derived fields like cups are computed; do not store.
+  matchesA  Match[]  @relation("A")
+  matchesB  Match[]  @relation("B")
+  ratings   Rating[]
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  playerA   Player   @relation("A", fields: [playerAId], references: [id])
+  playerAId String
+  playerB   Player   @relation("B", fields: [playerBId], references: [id])
+  playerBId String
+  gamesA    Int      // games won by A
+  gamesB    Int      // games won by B
+  playedAt  DateTime // user-provided; used for weekly/monthly grouping
+  createdAt DateTime @default(now())
+}
+
+model Rating {
+  id        String   @id @default(cuid())
+  player    Player   @relation(fields: [playerId], references: [id])
+  playerId  String
+  value     Int      // integer Elo for simplicity
+  atTime    DateTime // logical time after applying a match (match playedAt)
+  // store a rating snapshot right after a match updates
+}
+
+model Championship {
+  id        String   @id @default(cuid())
+  year      Int      // e.g., 2025
+  month     Int      // 1-12
+  createdAt DateTime @default(now())
+  // purely administrative; champions computed from matches within month
+  // keep unique
+  @@unique([year, month])
+}
