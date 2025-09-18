@@ -1,10 +1,14 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface LeaderboardPlayer {
+  id: string;
   name: string;
+  btRating: number;
+  dynamicPoints: number;
   wins: number;
   losses: number;
-  matches: number;
+  prevRank: number | null;
+  currentRank: number;
 }
 
 interface LeaderboardState {

@@ -51,8 +51,12 @@ async function main() {
   await prisma.rating.createMany({
     data: players.map(player => ({
       playerId: player.id,
-      value: 1000,
+      btRating: 1000,
+      dynamicPoints: 0,
       atTime: new Date(),
+      scope: 'all-time',
+      wins: 0,
+      losses: 0,
     })),
   });
 

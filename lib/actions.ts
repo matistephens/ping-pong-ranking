@@ -3,7 +3,7 @@
 import { prisma } from './prisma';
 import { updateElo } from './elo';
 import { getMonthStart, getMonthEnd } from './timezone';
-import { zonedTimeToUtc } from 'date-fns-tz';
+import { getLeaderboardStats } from './leaderboard';
 
 export async function createMatch(data: {
   playerAId: string;
@@ -48,11 +48,11 @@ export async function createMatch(data: {
       orderBy: { atTime: 'desc' },
     });
 
-    const currentRatingA = ratingA?.value ?? 1000;
-    const currentRatingB = ratingB?.value ?? 1000;
+    const currentRatingA = ratingA?.btRating ?? 1000;
+    const currentRatingB = ratingB?.btRating ?? 1000;
 
-    // Calculate new ratings
-    const { raNew, rbNew } = updateElo({
+    // Calculate new ratings and dynamic points
+    const { raNew, rbNew, dynamicPointsA, dynamicPointsB } = updateElo({
       ra: currentRatingA,
       rb: currentRatingB,
       gamesA: data.gamesA,
@@ -76,18 +76,41 @@ export async function createMatch(data: {
         },
       });
 
-      // Create rating snapshots
+      // Get previous dynamic points
+      const prevRatingA = await tx.rating.findFirst({
+        where: { playerId: playerA.id },
+        orderBy: { atTime: 'desc' },
+      });
+
+      const prevRatingB = await tx.rating.findFirst({
+        where: { playerId: playerB.id },
+        orderBy: { atTime: 'desc' },
+      });
+
+      // Accumulate dynamic points
+      const totalDynamicPointsA = (prevRatingA?.dynamicPoints ?? 0) + dynamicPointsA;
+      const totalDynamicPointsB = (prevRatingB?.dynamicPoints ?? 0) + dynamicPointsB;
+
+      // Create rating snapshots with Bradley-Terry ratings and dynamic points
       await tx.rating.createMany({
         data: [
           {
             playerId: playerA.id,
-            value: raNew,
+            btRating: raNew,
+            dynamicPoints: totalDynamicPointsA,
             atTime: data.playedAt,
+            scope: 'all-time',
+            wins: data.gamesA,
+            losses: data.gamesB,
           },
           {
             playerId: playerB.id,
-            value: rbNew,
+            btRating: rbNew,
+            dynamicPoints: totalDynamicPointsB,
             atTime: data.playedAt,
+            scope: 'all-time',
+            wins: data.gamesB,
+            losses: data.gamesA,
           },
         ],
       });
@@ -149,7 +172,7 @@ export async function getCurrentRatings() {
       return {
         id: player.id,
         name: player.name,
-        currentRating: player.ratings[0]?.value ?? 1000,
+        currentRating: player.ratings[0]?.btRating ?? 1000,
         matchesPlayed: allMatches.length,
         wins,
         losses: allMatches.length - wins,
@@ -179,55 +202,7 @@ export async function getRecentMatches(limit: number = 10) {
 
 export async function getWeeklyLeaderboard(weekStart: Date, weekEnd: Date) {
   try {
-    const matches = await prisma.match.findMany({
-      where: {
-        playedAt: {
-          gte: weekStart,
-          lte: weekEnd,
-        },
-      },
-      include: {
-        playerA: true,
-        playerB: true,
-      },
-    });
-
-    const playerStats = new Map<string, { name: string; wins: number; losses: number; matches: number }>();
-
-    matches.forEach(match => {
-      const playerAId = match.playerAId;
-      const playerBId = match.playerBId;
-      const playerAName = match.playerA.name;
-      const playerBName = match.playerB.name;
-
-      if (!playerStats.has(playerAId)) {
-        playerStats.set(playerAId, { name: playerAName, wins: 0, losses: 0, matches: 0 });
-      }
-      if (!playerStats.has(playerBId)) {
-        playerStats.set(playerBId, { name: playerBName, wins: 0, losses: 0, matches: 0 });
-      }
-
-      const statsA = playerStats.get(playerAId)!;
-      const statsB = playerStats.get(playerBId)!;
-
-      statsA.matches++;
-      statsB.matches++;
-
-      if (match.gamesA > match.gamesB) {
-        statsA.wins++;
-        statsB.losses++;
-      } else {
-        statsA.losses++;
-        statsB.wins++;
-      }
-    });
-
-    return Array.from(playerStats.values())
-      .sort((a, b) => {
-        const winRateA = a.matches > 0 ? a.wins / a.matches : 0;
-        const winRateB = b.matches > 0 ? b.wins / b.matches : 0;
-        return winRateB - winRateA;
-      });
+    return await getLeaderboardStats(weekStart, weekEnd);
   } catch (error) {
     console.error('Error fetching weekly leaderboard:', error);
     return [];
@@ -238,56 +213,7 @@ export async function getMonthlyLeaderboard(year: number, month: number) {
   try {
     const monthStart = new Date(year, month - 1, 1);
     const monthEnd = new Date(year, month, 0, 23, 59, 59);
-
-    const matches = await prisma.match.findMany({
-      where: {
-        playedAt: {
-          gte: monthStart,
-          lte: monthEnd,
-        },
-      },
-      include: {
-        playerA: true,
-        playerB: true,
-      },
-    });
-
-    const playerStats = new Map<string, { name: string; wins: number; losses: number; matches: number }>();
-
-    matches.forEach(match => {
-      const playerAId = match.playerAId;
-      const playerBId = match.playerBId;
-      const playerAName = match.playerA.name;
-      const playerBName = match.playerB.name;
-
-      if (!playerStats.has(playerAId)) {
-        playerStats.set(playerAId, { name: playerAName, wins: 0, losses: 0, matches: 0 });
-      }
-      if (!playerStats.has(playerBId)) {
-        playerStats.set(playerBId, { name: playerBName, wins: 0, losses: 0, matches: 0 });
-      }
-
-      const statsA = playerStats.get(playerAId)!;
-      const statsB = playerStats.get(playerBId)!;
-
-      statsA.matches++;
-      statsB.matches++;
-
-      if (match.gamesA > match.gamesB) {
-        statsA.wins++;
-        statsB.losses++;
-      } else {
-        statsA.losses++;
-        statsB.wins++;
-      }
-    });
-
-    return Array.from(playerStats.values())
-      .sort((a, b) => {
-        const winRateA = a.matches > 0 ? a.wins / a.matches : 0;
-        const winRateB = b.matches > 0 ? b.wins / b.matches : 0;
-        return winRateB - winRateA;
-      });
+    return await getLeaderboardStats(monthStart, monthEnd);
   } catch (error) {
     console.error('Error fetching monthly leaderboard:', error);
     return [];

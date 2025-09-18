@@ -33,12 +33,21 @@ model Match {
 }
 
 model Rating {
-  id        String   @id @default(cuid())
-  player    Player   @relation(fields: [playerId], references: [id])
-  playerId  String
-  value     Int      // integer Elo for simplicity
-  atTime    DateTime // logical time after applying a match (match playedAt)
-  // store a rating snapshot right after a match updates
+  id            String   @id @default(cuid())
+  player        Player   @relation(fields: [playerId], references: [id])
+  playerId      String
+  btRating      Float    @default(1000) // Bradley-Terry rating
+  dynamicPoints Float    @default(0)    // Accumulated dynamic points
+  atTime        DateTime // logical time after applying a match
+  scope         String   @default("all-time") // "all-time", "weekly", or "monthly"
+  weekYear      Int?     // Week number for weekly scope
+  weekNumber    Int?     // Week number for weekly scope
+  monthYear     Int?     // Year for monthly scope
+  monthNumber   Int?     // Month for monthly scope
+  prevRank      Int?     // Previous rank in this scope
+  currentRank   Int?     // Current rank in this scope
+  wins          Int      @default(0)    // Wins in this scope
+  losses        Int      @default(0)    // Losses in this scope
 }
 
 model Championship {

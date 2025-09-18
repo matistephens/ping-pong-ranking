@@ -17,7 +17,7 @@ export default function HomePage() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-center mb-2">🏓 Ping Pong Tracker</h1>
           <p className="text-center text-muted-foreground">
-            Track office ping-pong results with fair Elo-based rankings
+            Track office ping-pong results with Bradley-Terry ratings and Dynamic Points
           </p>
           
           {/* Navigation */}
@@ -67,9 +67,10 @@ export default function HomePage() {
                 <div className="p-6 rounded-lg border bg-card">
                   <h3 className="text-lg font-semibold mb-2">How Rankings Work</h3>
                   <div className="space-y-2 text-sm text-muted-foreground">
-                    <p>• <strong>Elo Rating:</strong> Fair ranking system that adjusts based on match results</p>
-                    <p>• <strong>Weekly Winner:</strong> Best win% with ≥2 matches in the week</p>
-                    <p>• <strong>Monthly Champion:</strong> Best win% with ≥4 matches in the month</p>
+                    <p>• <strong>BT Rating:</strong> Bradley-Terry skill estimate, scaled around 1000</p>
+                    <p>• <strong>Dynamic Points:</strong> Rewards upsets - more points for beating stronger players</p>
+                    <p>• <strong>Weekly Winner:</strong> Top Dynamic Points in the week</p>
+                    <p>• <strong>Monthly Champion:</strong> Top Dynamic Points in the month</p>
                     <p>• <strong>Cups:</strong> Count of months won as champion</p>
                   </div>
                 </div>

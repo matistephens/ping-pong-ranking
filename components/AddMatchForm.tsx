@@ -64,6 +64,7 @@ export function AddMatchForm() {
         });
         reset();
         // Trigger a refresh of all components
+        console.log('Dispatching refresh after successful match submission');
         dispatch(triggerRefresh());
       } else {
         toast({
