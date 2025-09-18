@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    console.log('Starting database setup...');
+    // This will be called after deployment to set up the database
+    const { prisma } = await import('@/lib/prisma');
     
-    // Test connection first
+    // Test connection
     await prisma.$connect();
-    console.log('Database connected successfully');
     
     // Create hardcoded players
     const players = ['Mati', 'Rodrigo', 'Max', 'Rigved', 'Ziai', 'Jake'];
@@ -20,24 +19,18 @@ export async function GET() {
         create: { name },
       });
       createdPlayers.push(player);
-      console.log(`Created player: ${name}`);
     }
-    
-    console.log('Database setup complete!');
     
     return NextResponse.json({ 
       success: true, 
-      message: 'Database setup complete! Players created.',
+      message: 'Database initialized successfully!',
       players: createdPlayers
     });
   } catch (error) {
-    console.error('Setup error:', error);
+    console.error('Init error:', error);
     return NextResponse.json({ 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      details: error
+      error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
-  } finally {
-    await prisma.$disconnect();
   }
 }
